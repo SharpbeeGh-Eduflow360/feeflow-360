@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 export interface School {
   id: string
   name: string
+  logo_url: string | null
   school_type: string | null
   currency: string
   onboarding_step: string
@@ -18,7 +19,7 @@ export function useSchool() {
     setLoading(true)
     const { data, error } = await supabase
       .from('schools')
-      .select('id, name, school_type, currency, onboarding_step, onboarding_completed')
+      .select('id, name, logo_url, school_type, currency, onboarding_step, onboarding_completed')
       .single()
 
     if (!error && data) {

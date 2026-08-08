@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 function initials(name?: string | null, email?: string | null) {
   if (name) {
@@ -41,6 +41,14 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         >
           <Menu className="h-5 w-5" />
         </Button>
+
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarImage src={school?.logo_url ?? undefined} />
+          <AvatarFallback className="bg-brand-navy text-white text-xs">
+            {school?.name?.[0]?.toUpperCase() ?? 'S'}
+          </AvatarFallback>
+        </Avatar>
+
         <span className="font-semibold">{school?.name ?? 'FeeFlow-360'}</span>
       </div>
 

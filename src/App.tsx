@@ -8,6 +8,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import CompleteSchool from './pages/CompleteSchool'
 import Onboarding from './pages/Onboarding'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -25,6 +26,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               }
             />
