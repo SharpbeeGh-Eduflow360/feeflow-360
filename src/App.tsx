@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import CompleteSchool from './pages/CompleteSchool'
+import Onboarding from './pages/Onboarding'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/complete-school" element={<CompleteSchool />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route
               path="/dashboard"
               element={
