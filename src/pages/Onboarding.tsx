@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useSchool } from '@/hooks/useSchool'
 import { SchoolTypeStep } from '@/components/onboarding/SchoolTypeStep'
+import { AcademicYearStep } from '@/components/onboarding/AcademicYearStep'
 
 export default function Onboarding() {
   const navigate = useNavigate()
@@ -35,6 +36,10 @@ export default function Onboarding() {
 
         {school.onboarding_step === 'school_type' && (
           <SchoolTypeStep schoolId={school.id} onComplete={refetch} />
+        )}
+
+        {school.onboarding_step === 'academic_year' && (
+          <AcademicYearStep schoolId={school.id} onComplete={refetch} />
         )}
       </div>
     </div>
