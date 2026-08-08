@@ -52,47 +52,18 @@ export default function Register() {
   }
 
   async function handleCreateSchool(e: FormEvent) {
-  e.preventDefault()
-  setError(null)
-  setLoading(true)
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
 
-  const { error: rpcError } = await supabase.rpc('create_school_and_link', {
-    school_name: schoolName,
-  })
-
-  setLoading(false)
-
-  if (rpcError) {
-    setError(rpcError.message)
-    return
-  }
-
-  navigate('/dashboard')
-}
-
-    // 1. Create the school
-    const { data: school, error: schoolError } = await supabase
-      .from('schools')
-      .insert({ name: schoolName })
-      .select()
-      .single()
-
-    if (schoolError) {
-      setError(schoolError.message)
-      setLoading(false)
-      return
-    }
-
-    // 2. Link the profile to this school
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ school_id: school.id })
-      .eq('id', user.id)
+    const { error: rpcError } = await supabase.rpc('create_school_and_link', {
+      school_name: schoolName,
+    })
 
     setLoading(false)
 
-    if (profileError) {
-      setError(profileError.message)
+    if (rpcError) {
+      setError(rpcError.message)
       return
     }
 
