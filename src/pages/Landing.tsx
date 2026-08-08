@@ -4,6 +4,8 @@ import { Problem } from '@/components/landing/Problem'
 import { Solution } from '@/components/landing/Solution'
 import { Features } from '@/components/landing/Features'
 import { Workflow } from '@/components/landing/Workflow'
+import { Reports } from '@/components/landing/Reports'
+import { Security } from '@/components/landing/Security'
 import { Testimonials } from '@/components/landing/Testimonials'
 import { Pricing } from '@/components/landing/Pricing'
 import { FAQ } from '@/components/landing/FAQ'
@@ -18,6 +20,8 @@ export default function Landing() {
       <Solution />
       <Features />
       <Workflow />
+      <Reports />
+      <Security />
       <Testimonials />
       <Pricing />
       <FAQ />
