@@ -1,18 +1,35 @@
 import { useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSchool } from '@/hooks/useSchool'
+import { supabase } from '@/lib/supabase'
 import { SchoolTypeStep } from '@/components/onboarding/SchoolTypeStep'
 import { AcademicYearStep } from '@/components/onboarding/AcademicYearStep'
+import { TermsStep } from '@/components/onboarding/TermsStep'
+import { CompleteStep } from '@/components/onboarding/CompleteStep'
 
 export default function Onboarding() {
   const navigate = useNavigate()
   const { school, loading, refetch } = useSchool()
+  const [academicYearId, setAcademicYearId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && school?.onboarding_completed) {
       navigate('/dashboard', { replace: true })
     }
   }, [loading, school, navigate])
+
+  useEffect(() => {
+    if (school?.onboarding_step === 'terms') {
+      supabase
+        .from('academic_years')
+        .select('id')
+        .eq('school_id', school.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setAcademicYearId(data.id)
+        })
+    }
+  }, [school])
 
   if (loading || !school) {
     return (
@@ -41,6 +58,17 @@ export default function Onboarding() {
         {school.onboarding_step === 'academic_year' && (
           <AcademicYearStep schoolId={school.id} onComplete={refetch} />
         )}
+
+        {school.onboarding_step === 'terms' && academicYearId && (
+          <TermsStep
+            schoolId={school.id}
+            academicYearId={academicYearId}
+            onComplete={refetch}
+          />
+        )}
+        {school.onboarding_step === 'complete' && (
+  <CompleteStep schoolId={school.id} />
+)}
       </div>
     </div>
   )
