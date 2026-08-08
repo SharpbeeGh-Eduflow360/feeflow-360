@@ -3,6 +3,8 @@ import { AuthProvider } from './lib/auth-context'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
+import Register from './pages/Register'
+import CompleteSchool from './pages/CompleteSchool'
 
 function App() {
   return (
@@ -17,6 +19,8 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/Register" element={<Register />} />
+          <Route path="/complete-school" element={<CompleteSchool />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
