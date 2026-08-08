@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
+import { AppLayout } from '@/components/layout/AppLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface SchoolInfo {
@@ -9,7 +9,7 @@ interface SchoolInfo {
 }
 
 export default function Dashboard() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const [school, setSchool] = useState<SchoolInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -30,11 +30,14 @@ export default function Dashboard() {
   }, [])
 
   return (
-    <div className="min-h-screen p-4">
-      <div className="max-w-2xl mx-auto flex flex-col gap-4">
+    <AppLayout>
+      <div className="mx-auto max-w-2xl">
         <Card>
           <CardHeader>
-            <CardTitle>Welcome{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ''}</CardTitle>
+            <CardTitle>
+              Welcome
+              {user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ''}
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div>
@@ -48,13 +51,9 @@ export default function Dashboard() {
                 {loading ? 'Loading...' : school?.name ?? 'No school found'}
               </p>
             </div>
-
-            <Button variant="outline" onClick={signOut} className="w-fit">
-              Log out
-            </Button>
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AppLayout>
   )
 }
