@@ -15,6 +15,7 @@ import AddStudent from './pages/AddStudent'
 import StudentDetail from './pages/StudentDetail'
 import ImportStudents from './pages/ImportStudents'
 import PromoteStudents from './pages/PromoteStudents'
+import FeeCategories from './pages/FeeCategories'
 // ...
 
 function App() {
@@ -82,6 +83,14 @@ function App() {
   element={
     <ProtectedRoute>
       <PromoteStudents />
+    </ProtectedRoute>
+  }
+/>
+            <Route
+  path="/fee-categories"
+  element={
+    <ProtectedRoute>
+      <FeeCategories />
     </ProtectedRoute>
   }
 />
