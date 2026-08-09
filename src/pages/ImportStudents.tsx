@@ -16,6 +16,7 @@ interface ParsedRow {
   guardian_name?: string
   guardian_phone?: string
   guardian_email?: string
+  opening_balance?: string
   valid: boolean
   error?: string
 }
@@ -67,6 +68,7 @@ export default function ImportStudents() {
             guardian_name: row.guardian_name?.trim(),
             guardian_phone: row.guardian_phone?.trim(),
             guardian_email: row.guardian_email?.trim(),
+            opening_balance: row.opening_balance?.trim(),
             valid,
             error: valid ? undefined : 'Missing first or last name',
           }
@@ -89,10 +91,10 @@ export default function ImportStudents() {
     let successCount = 0
     let failedCount = 0
 
-    // Insert in batches to avoid overly large single requests
     const batchSize = 50
     for (let i = 0; i < validRows.length; i += batchSize) {
-      const batch = validRows.slice(i, i + batchSize).map((r) => ({
+      const batchRows = validRows.slice(i, i + batchSize)
+      const batch = batchRows.map((r) => ({
         school_id: school.id,
         first_name: r.first_name,
         last_name: r.last_name,
@@ -105,10 +107,30 @@ export default function ImportStudents() {
 
       const { error, data } = await supabase.from('students').insert(batch).select('id')
 
-      if (error) {
+      if (error || !data) {
         failedCount += batch.length
-      } else {
-        successCount += data?.length ?? 0
+        continue
+      }
+
+      successCount += data.length
+
+      // Insert opening balances for rows that specified one, matched by insert order
+      const openingBalanceInserts = data
+        .map((studentRow, idx) => {
+          const amountStr = batchRows[idx]?.opening_balance
+          const amount = amountStr ? parseFloat(amountStr) : NaN
+          if (isNaN(amount) || amount === 0) return null
+          return {
+            school_id: school.id,
+            student_id: studentRow.id,
+            amount,
+            note: 'Initial balance recorded during bulk import',
+          }
+        })
+        .filter((row): row is NonNullable<typeof row> => row !== null)
+
+      if (openingBalanceInserts.length > 0) {
+        await supabase.from('opening_balances').insert(openingBalanceInserts)
       }
     }
 
@@ -149,7 +171,8 @@ export default function ImportStudents() {
               <code className="rounded bg-muted px-1.5 py-0.5 text-xs">date_of_birth</code> (YYYY-MM-DD),{' '}
               <code className="rounded bg-muted px-1.5 py-0.5 text-xs">guardian_name</code>,{' '}
               <code className="rounded bg-muted px-1.5 py-0.5 text-xs">guardian_phone</code>,{' '}
-              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">guardian_email</code>
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">guardian_email</code>,{' '}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">opening_balance</code>
             </p>
 
             <div className="mt-6">
@@ -198,6 +221,7 @@ export default function ImportStudents() {
                     <tr>
                       <th className="p-2 text-left font-medium">Name</th>
                       <th className="p-2 text-left font-medium">Guardian</th>
+                      <th className="p-2 text-left font-medium">Opening balance</th>
                       <th className="p-2 text-left font-medium">Status</th>
                     </tr>
                   </thead>
@@ -208,6 +232,7 @@ export default function ImportStudents() {
                           {row.first_name} {row.last_name}
                         </td>
                         <td className="p-2 text-muted-foreground">{row.guardian_name || '—'}</td>
+                        <td className="p-2 text-muted-foreground">{row.opening_balance || '—'}</td>
                         <td className="p-2">
                           {row.valid ? (
                             <span className="text-green-600">Valid</span>

@@ -39,6 +39,13 @@ interface Department { id: string; name: string }
 interface Grade { id: string; name: string; department_id: string }
 interface Section { id: string; name: string; grade_id: string }
 
+interface OpeningBalance {
+  id: string
+  amount: number
+  note: string | null
+  created_at: string
+}
+
 const statusOptions = ['active', 'promoted', 'graduated', 'transferred', 'withdrawn', 'suspended', 'alumni']
 
 export default function StudentDetail() {
@@ -49,6 +56,7 @@ export default function StudentDetail() {
   const [departments, setDepartments] = useState<Department[]>([])
   const [grades, setGrades] = useState<Grade[]>([])
   const [sections, setSections] = useState<Section[]>([])
+  const [openingBalances, setOpeningBalances] = useState<OpeningBalance[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -57,17 +65,19 @@ export default function StudentDetail() {
 
   useEffect(() => {
     async function load() {
-      const [studentRes, deptRes, gradeRes, sectionRes] = await Promise.all([
+      const [studentRes, deptRes, gradeRes, sectionRes, balancesRes] = await Promise.all([
         supabase.from('students').select('*').eq('id', id).single(),
         supabase.from('departments').select('id, name').order('position'),
         supabase.from('grades').select('id, name, department_id').order('position'),
         supabase.from('sections').select('id, name, grade_id'),
+        supabase.from('opening_balances').select('id, amount, note, created_at').eq('student_id', id).order('created_at', { ascending: false }),
       ])
 
       if (studentRes.data) setStudent(studentRes.data)
       if (deptRes.data) setDepartments(deptRes.data)
       if (gradeRes.data) setGrades(gradeRes.data)
       if (sectionRes.data) setSections(sectionRes.data)
+      if (balancesRes.data) setOpeningBalances(balancesRes.data)
       setLoading(false)
     }
     load()
@@ -75,6 +85,7 @@ export default function StudentDetail() {
 
   const gradesInDept = grades.filter((g) => g.department_id === student?.department_id)
   const sectionsInGrade = sections.filter((s) => s.grade_id === student?.grade_id)
+  const totalOpeningBalance = openingBalances.reduce((sum, b) => sum + Number(b.amount), 0)
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -83,11 +94,8 @@ export default function StudentDetail() {
     setUploading(true)
     setError(null)
 
-    const filePath = `${student.id}/photo-${Date.now()}.${file.name.split('.').pop()}`
-    // Note: uses school_id folder via a join, but for simplicity we get it from student's own school
     const { data: studentRow } = await supabase.from('students').select('school_id').eq('id', student.id).single()
-
-    const fullPath = `${studentRow?.school_id}/${filePath}`
+    const fullPath = `${studentRow?.school_id}/${student.id}/photo-${Date.now()}.${file.name.split('.').pop()}`
 
     const { error: uploadError } = await supabase.storage
       .from('student-photos')
@@ -214,6 +222,30 @@ export default function StudentDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {openingBalances.length > 0 && (
+            <Card className={totalOpeningBalance > 0 ? 'border-brand-gold' : ''}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-muted-foreground">Opening balance</h2>
+                  <span className={`text-lg font-semibold ${totalOpeningBalance > 0 ? 'text-brand-gold' : 'text-muted-foreground'}`}>
+                    GH¢{totalOpeningBalance.toFixed(2)}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-col gap-2">
+                  {openingBalances.map((b) => (
+                    <div key={b.id} className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
+                      <span className="text-muted-foreground">{b.note}</span>
+                      <span className="font-medium">GH¢{Number(b.amount).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Recorded once, carried forward automatically once billing is enabled.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardContent className="flex flex-col gap-4 pt-6">

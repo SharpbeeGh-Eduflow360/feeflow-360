@@ -14,6 +14,7 @@ import Students from './pages/Students'
 import AddStudent from './pages/AddStudent'
 import StudentDetail from './pages/StudentDetail'
 import ImportStudents from './pages/ImportStudents'
+import PromoteStudents from './pages/PromoteStudents'
 // ...
 
 function App() {
@@ -73,6 +74,14 @@ function App() {
   element={
     <ProtectedRoute>
       <ImportStudents />
+    </ProtectedRoute>
+  }
+/>
+            <Route
+  path="/students/promote"
+  element={
+    <ProtectedRoute>
+      <PromoteStudents />
     </ProtectedRoute>
   }
 />

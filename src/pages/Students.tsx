@@ -52,6 +52,7 @@ export default function Students() {
   const [students, setStudents] = useState<StudentRow[]>([])
   const [grades, setGrades] = useState<Grade[]>([])
   const [sections, setSections] = useState<Section[]>([])
+  const [balances, setBalances] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [gradeFilter, setGradeFilter] = useState<string>('all')
@@ -59,18 +60,28 @@ export default function Students() {
 
   useEffect(() => {
     async function load() {
-      const [studentsRes, gradesRes, sectionsRes] = await Promise.all([
+      const [studentsRes, gradesRes, sectionsRes, balancesRes] = await Promise.all([
         supabase
           .from('students')
           .select('id, admission_number, first_name, last_name, photo_url, status, grade_id, section_id')
           .order('created_at', { ascending: false }),
         supabase.from('grades').select('id, name').order('position'),
         supabase.from('sections').select('id, name'),
+        supabase.from('opening_balances').select('student_id, amount'),
       ])
 
       if (studentsRes.data) setStudents(studentsRes.data)
       if (gradesRes.data) setGrades(gradesRes.data)
       if (sectionsRes.data) setSections(sectionsRes.data)
+
+      if (balancesRes.data) {
+        const totals: Record<string, number> = {}
+        for (const row of balancesRes.data) {
+          totals[row.student_id] = (totals[row.student_id] ?? 0) + Number(row.amount)
+        }
+        setBalances(totals)
+      }
+
       setLoading(false)
     }
     load()
@@ -104,6 +115,11 @@ export default function Students() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button asChild variant="outline">
+  <Link to="/students/promote">
+    Promote
+  </Link>
+</Button>
             <Button asChild variant="outline">
               <Link to="/students/import">
                 <Upload className="mr-2 h-4 w-4" />
@@ -164,38 +180,57 @@ export default function Students() {
             </Card>
           )}
 
-          {filtered.map((student) => (
-            <Link key={student.id} to={`/students/${student.id}`}>
-              <Card className="transition-colors hover:bg-muted/50">
-                <CardContent className="flex items-center gap-3 py-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={student.photo_url ?? undefined} />
-                    <AvatarFallback className="bg-brand-navy text-white text-sm">
-                      {student.first_name[0]}
-                      {student.last_name[0]}
-                    </AvatarFallback>
-                  </Avatar>
+          {filtered.map((student) => {
+            const balance = balances[student.id] ?? 0
 
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">
-                      {student.first_name} {student.last_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {student.admission_number} · {gradeSectionLabel(student.grade_id, student.section_id)}
-                    </p>
-                  </div>
+            return (
+              <Link key={student.id} to={`/students/${student.id}`}>
+                <Card className="transition-colors hover:bg-muted/50">
+                  <CardContent className="flex items-center gap-3 py-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={student.photo_url ?? undefined} />
+                      <AvatarFallback className="bg-brand-navy text-white text-sm">
+                        {student.first_name[0]}
+                        {student.last_name[0]}
+                      </AvatarFallback>
+                    </Avatar>
 
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-                      statusStyles[student.status] ?? 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {student.status}
-                  </span>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">
+                        {student.first_name} {student.last_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {student.admission_number} · {gradeSectionLabel(student.grade_id, student.section_id)}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1">
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
+                          statusStyles[student.status] ?? 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {student.status}
+                      </span>
+                      <span
+                        className={`text-xs font-medium ${
+                          balance > 0
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-green-600 dark:text-green-400'
+                        }`}
+                      >
+                        {balance > 0
+                          ? `GH¢${balance.toFixed(2)} owed`
+                          : balance < 0
+                          ? `GH¢${Math.abs(balance).toFixed(2)} credit`
+                          : 'GH¢0.00'}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
         </div>
       </div>
     </AppLayout>
