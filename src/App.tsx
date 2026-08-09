@@ -12,6 +12,7 @@ import Settings from './pages/Settings'
 import TermExpired from './pages/TermExpired'
 import Students from './pages/Students'
 import AddStudent from './pages/AddStudent'
+import StudentDetail from './pages/StudentDetail'
 // ...
 
 function App() {
@@ -55,6 +56,14 @@ function App() {
   element={
     <ProtectedRoute>
       <AddStudent />
+    </ProtectedRoute>
+  }
+/>
+            <Route
+  path="/students/:id"
+  element={
+    <ProtectedRoute>
+      <StudentDetail />
     </ProtectedRoute>
   }
 />
