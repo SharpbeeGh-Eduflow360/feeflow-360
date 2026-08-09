@@ -1,0 +1,161 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { supabase } from '@/lib/supabase'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Plus, Search } from 'lucide-react'
+
+interface StudentRow {
+  id: string
+  admission_number: string | null
+  first_name: string
+  last_name: string
+  photo_url: string | null
+  status: string
+  grade_id: string | null
+  section_id: string | null
+}
+
+interface Grade {
+  id: string
+  name: string
+}
+
+interface Section {
+  id: string
+  name: string
+}
+
+const statusStyles: Record<string, string> = {
+  active: 'bg-brand-gold/10 text-brand-gold',
+  promoted: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  graduated: 'bg-green-500/10 text-green-600 dark:text-green-400',
+  transferred: 'bg-muted text-muted-foreground',
+  withdrawn: 'bg-muted text-muted-foreground',
+  suspended: 'bg-red-500/10 text-red-600',
+  alumni: 'bg-muted text-muted-foreground',
+}
+
+export default function Students() {
+  const [students, setStudents] = useState<StudentRow[]>([])
+  const [grades, setGrades] = useState<Grade[]>([])
+  const [sections, setSections] = useState<Section[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    async function load() {
+      const [studentsRes, gradesRes, sectionsRes] = await Promise.all([
+        supabase
+          .from('students')
+          .select('id, admission_number, first_name, last_name, photo_url, status, grade_id, section_id')
+          .order('created_at', { ascending: false }),
+        supabase.from('grades').select('id, name'),
+        supabase.from('sections').select('id, name'),
+      ])
+
+      if (studentsRes.data) setStudents(studentsRes.data)
+      if (gradesRes.data) setGrades(gradesRes.data)
+      if (sectionsRes.data) setSections(sectionsRes.data)
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  function gradeSectionLabel(gradeId: string | null, sectionId: string | null) {
+    const grade = grades.find((g) => g.id === gradeId)
+    const section = sections.find((s) => s.id === sectionId)
+    if (!grade) return '—'
+    return section ? `${grade.name}${section.name}` : grade.name
+  }
+
+  const filtered = students.filter((s) => {
+    const fullName = `${s.first_name} ${s.last_name}`.toLowerCase()
+    const query = search.toLowerCase()
+    return (
+      fullName.includes(query) ||
+      s.admission_number?.toLowerCase().includes(query)
+    )
+  })
+
+  return (
+    <AppLayout>
+      <div className="mx-auto max-w-4xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Students</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {loading ? 'Loading...' : `${students.length} students`}
+            </p>
+          </div>
+          <Button asChild className="bg-brand-navy text-white hover:bg-brand-navy-light">
+            <Link to="/students/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Add student
+            </Link>
+          </Button>
+        </div>
+
+        <div className="mt-4 relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or admission number..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2">
+          {loading && <p className="text-sm text-muted-foreground">Loading students...</p>}
+
+          {!loading && filtered.length === 0 && (
+            <Card>
+              <CardContent className="pt-6 text-center text-sm text-muted-foreground">
+                {students.length === 0
+                  ? 'No students yet. Add your first student to get started.'
+                  : 'No students match your search.'}
+              </CardContent>
+            </Card>
+          )}
+
+          {filtered.map((student) => (
+            <Link key={student.id} to={`/students/${student.id}`}>
+              <Card className="transition-colors hover:bg-muted/50">
+                <CardContent className="flex items-center gap-3 py-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={student.photo_url ?? undefined} />
+                    <AvatarFallback className="bg-brand-navy text-white text-sm">
+                      {student.first_name[0]}
+                      {student.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">
+                      {student.first_name} {student.last_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {student.admission_number} · {gradeSectionLabel(student.grade_id, student.section_id)}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
+                      statusStyles[student.status] ?? 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {student.status}
+                  </span>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </AppLayout>
+  )
+}

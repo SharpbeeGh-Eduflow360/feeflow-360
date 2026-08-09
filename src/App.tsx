@@ -10,6 +10,9 @@ import CompleteSchool from './pages/CompleteSchool'
 import Onboarding from './pages/Onboarding'
 import Settings from './pages/Settings'
 import TermExpired from './pages/TermExpired'
+import Students from './pages/Students'
+import AddStudent from './pages/AddStudent'
+// ...
 
 function App() {
   return (
@@ -39,6 +42,22 @@ function App() {
               }
             />
             <Route path="/term-expired" element={<TermExpired />} />
+            <Route
+  path="/students"
+  element={
+    <ProtectedRoute>
+      <Students />
+    </ProtectedRoute>
+  }
+/>
+            <Route
+  path="/students/new"
+  element={
+    <ProtectedRoute>
+      <AddStudent />
+    </ProtectedRoute>
+  }
+/>
           </Routes>
         </BrowserRouter>
       </AuthProvider>
