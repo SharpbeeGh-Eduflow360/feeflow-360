@@ -24,16 +24,14 @@ export function getPeriodStatus(
   if (today > endDate) return 'passed'
   return 'current'
 }
+
 export function isWithinRange(
   innerStart: string | null,
   innerEnd: string | null,
   outerStart: string | null,
   outerEnd: string | null
 ): { valid: boolean; reason?: string } {
-  // If the outer range (academic year) has no dates set, we can't validate against it
   if (!outerStart || !outerEnd) return { valid: true }
-
-  // If the inner range (term) has no dates, nothing to validate yet
   if (!innerStart || !innerEnd) return { valid: true }
 
   if (innerStart < outerStart || innerStart > outerEnd) {
@@ -45,4 +43,10 @@ export function isWithinRange(
   }
 
   return { valid: true }
+}
+
+export function isPastEndDate(endDate: string | null): boolean {
+  if (!endDate) return false
+  const today = new Date().toISOString().split('T')[0]
+  return today > endDate
 }

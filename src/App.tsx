@@ -9,6 +9,7 @@ import Register from './pages/Register'
 import CompleteSchool from './pages/CompleteSchool'
 import Onboarding from './pages/Onboarding'
 import Settings from './pages/Settings'
+import TermExpired from './pages/TermExpired'
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/term-expired" element={<TermExpired />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
