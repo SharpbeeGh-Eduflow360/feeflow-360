@@ -16,6 +16,8 @@ import StudentDetail from './pages/StudentDetail'
 import ImportStudents from './pages/ImportStudents'
 import PromoteStudents from './pages/PromoteStudents'
 import FeeCategories from './pages/FeeCategories'
+import AddFeeStructure from './pages/AddFeeStructure'
+import FeeStructureDetail from './pages/FeeStructureDetail'
 // ...
 
 function App() {
@@ -94,6 +96,24 @@ function App() {
     </ProtectedRoute>
   }
 />
+          
+            <Route
+  path="/fee-structures/new"
+  element={
+    <ProtectedRoute>
+      <AddFeeStructure />
+    </ProtectedRoute>
+  }
+/>
+            <Route
+  path="/fee-structures/:id"
+  element={
+    <ProtectedRoute>
+      <FeeStructureDetail />
+    </ProtectedRoute>
+  }
+/>
+            
           </Routes>
         </BrowserRouter>
       </AuthProvider>
