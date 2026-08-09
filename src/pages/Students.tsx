@@ -5,8 +5,15 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Upload } from 'lucide-react'
 
 interface StudentRow {
   id: string
@@ -39,12 +46,16 @@ const statusStyles: Record<string, string> = {
   alumni: 'bg-muted text-muted-foreground',
 }
 
+const statusOptions = ['active', 'promoted', 'graduated', 'transferred', 'withdrawn', 'suspended', 'alumni']
+
 export default function Students() {
   const [students, setStudents] = useState<StudentRow[]>([])
   const [grades, setGrades] = useState<Grade[]>([])
   const [sections, setSections] = useState<Section[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [gradeFilter, setGradeFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   useEffect(() => {
     async function load() {
@@ -53,7 +64,7 @@ export default function Students() {
           .from('students')
           .select('id, admission_number, first_name, last_name, photo_url, status, grade_id, section_id')
           .order('created_at', { ascending: false }),
-        supabase.from('grades').select('id, name'),
+        supabase.from('grades').select('id, name').order('position'),
         supabase.from('sections').select('id, name'),
       ])
 
@@ -75,38 +86,69 @@ export default function Students() {
   const filtered = students.filter((s) => {
     const fullName = `${s.first_name} ${s.last_name}`.toLowerCase()
     const query = search.toLowerCase()
-    return (
-      fullName.includes(query) ||
-      s.admission_number?.toLowerCase().includes(query)
-    )
+    const matchesSearch =
+      fullName.includes(query) || s.admission_number?.toLowerCase().includes(query)
+    const matchesGrade = gradeFilter === 'all' || s.grade_id === gradeFilter
+    const matchesStatus = statusFilter === 'all' || s.status === statusFilter
+    return matchesSearch && matchesGrade && matchesStatus
   })
 
   return (
     <AppLayout>
       <div className="mx-auto max-w-4xl">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">Students</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {loading ? 'Loading...' : `${students.length} students`}
+              {loading ? 'Loading...' : `${filtered.length} of ${students.length} students`}
             </p>
           </div>
-          <Button asChild className="bg-brand-navy text-white hover:bg-brand-navy-light">
-            <Link to="/students/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add student
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link to="/students/import">
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Link>
+            </Button>
+            <Button asChild className="bg-brand-navy text-white hover:bg-brand-navy-light">
+              <Link to="/students/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Add student
+              </Link>
+            </Button>
+          </div>
         </div>
 
-        <div className="mt-4 relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or admission number..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or admission number..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+            <SelectTrigger className="sm:w-40"><SelectValue placeholder="Grade" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All grades</SelectItem>
+              {grades.map((g) => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="sm:w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              {statusOptions.map((s) => (
+                <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="mt-4 flex flex-col gap-2">
@@ -117,7 +159,7 @@ export default function Students() {
               <CardContent className="pt-6 text-center text-sm text-muted-foreground">
                 {students.length === 0
                   ? 'No students yet. Add your first student to get started.'
-                  : 'No students match your search.'}
+                  : 'No students match your filters.'}
               </CardContent>
             </Card>
           )}

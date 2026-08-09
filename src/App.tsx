@@ -13,6 +13,7 @@ import TermExpired from './pages/TermExpired'
 import Students from './pages/Students'
 import AddStudent from './pages/AddStudent'
 import StudentDetail from './pages/StudentDetail'
+import ImportStudents from './pages/ImportStudents'
 // ...
 
 function App() {
@@ -64,6 +65,14 @@ function App() {
   element={
     <ProtectedRoute>
       <StudentDetail />
+    </ProtectedRoute>
+  }
+/>
+            <Route
+  path="/students/import"
+  element={
+    <ProtectedRoute>
+      <ImportStudents />
     </ProtectedRoute>
   }
 />

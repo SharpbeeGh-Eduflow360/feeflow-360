@@ -55,6 +55,7 @@ export default function AddStudent() {
   const [guardianPhone, setGuardianPhone] = useState('')
   const [guardianEmail, setGuardianEmail] = useState('')
   const [admissionDate, setAdmissionDate] = useState('')
+  const [openingBalance, setOpeningBalance] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
 
@@ -131,13 +132,23 @@ export default function AddStudent() {
       .select()
       .single()
 
-    setSaving(false)
-
     if (insertError) {
       setError(insertError.message)
+      setSaving(false)
       return
     }
 
+    const balanceAmount = parseFloat(openingBalance)
+    if (!isNaN(balanceAmount) && balanceAmount !== 0) {
+      await supabase.from('opening_balances').insert({
+        school_id: school.id,
+        student_id: data.id,
+        amount: balanceAmount,
+        note: 'Initial balance recorded at student creation',
+      })
+    }
+
+    setSaving(false)
     navigate(`/students/${data.id}`)
   }
 
@@ -224,6 +235,21 @@ export default function AddStudent() {
               <div className="flex flex-col gap-2">
                 <Label htmlFor="admissionDate">Admission date</Label>
                 <Input id="admissionDate" type="date" value={admissionDate} onChange={(e) => setAdmissionDate(e.target.value)} />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="openingBalance">Opening balance (optional)</Label>
+                <Input
+                  id="openingBalance"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={openingBalance}
+                  onChange={(e) => setOpeningBalance(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  If this student already owes money from before joining FeeFlow-360, enter it here.
+                </p>
               </div>
             </CardContent>
           </Card>
