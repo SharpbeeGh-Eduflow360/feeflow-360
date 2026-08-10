@@ -15,10 +15,11 @@ import AddStudent from './pages/AddStudent'
 import StudentDetail from './pages/StudentDetail'
 import ImportStudents from './pages/ImportStudents'
 import PromoteStudents from './pages/PromoteStudents'
-import FeeCategories from './pages/FeeCategories'
 import AddFeeStructure from './pages/AddFeeStructure'
 import FeeStructureDetail from './pages/FeeStructureDetail'
-// ...
+import GenerateBill from './pages/GenerateBill'
+import Billing from './pages/Billing'
+import BillDetail from './pages/BillDetail'
 
 function App() {
   return (
@@ -49,71 +50,85 @@ function App() {
             />
             <Route path="/term-expired" element={<TermExpired />} />
             <Route
-  path="/students"
-  element={
-    <ProtectedRoute>
-      <Students />
-    </ProtectedRoute>
-  }
-/>
+              path="/students"
+              element={
+                <ProtectedRoute>
+                  <Students />
+                </ProtectedRoute>
+              }
+            />
             <Route
-  path="/students/new"
-  element={
-    <ProtectedRoute>
-      <AddStudent />
-    </ProtectedRoute>
-  }
-/>
+              path="/students/new"
+              element={
+                <ProtectedRoute>
+                  <AddStudent />
+                </ProtectedRoute>
+              }
+            />
             <Route
-  path="/students/:id"
-  element={
-    <ProtectedRoute>
-      <StudentDetail />
-    </ProtectedRoute>
-  }
-/>
+              path="/students/:id"
+              element={
+                <ProtectedRoute>
+                  <StudentDetail />
+                </ProtectedRoute>
+              }
+            />
             <Route
-  path="/students/import"
-  element={
-    <ProtectedRoute>
-      <ImportStudents />
-    </ProtectedRoute>
-  }
-/>
+              path="/students/import"
+              element={
+                <ProtectedRoute>
+                  <ImportStudents />
+                </ProtectedRoute>
+              }
+            />
             <Route
-  path="/students/promote"
-  element={
-    <ProtectedRoute>
-      <PromoteStudents />
-    </ProtectedRoute>
-  }
-/>
+              path="/students/promote"
+              element={
+                <ProtectedRoute>
+                  <PromoteStudents />
+                </ProtectedRoute>
+              }
+            />
             <Route
-  path="/fee-categories"
-  element={
-    <ProtectedRoute>
-      <FeeCategories />
-    </ProtectedRoute>
-  }
-/>
-          
+              path="/billing"
+              element={
+                <ProtectedRoute>
+                  <Billing />
+                </ProtectedRoute>
+              }
+            />
             <Route
-  path="/fee-structures/new"
-  element={
-    <ProtectedRoute>
-      <AddFeeStructure />
-    </ProtectedRoute>
-  }
-/>
+              path="/fee-structures/new"
+              element={
+                <ProtectedRoute>
+                  <AddFeeStructure />
+                </ProtectedRoute>
+              }
+            />
             <Route
-  path="/fee-structures/:id"
-  element={
-    <ProtectedRoute>
-      <FeeStructureDetail />
-    </ProtectedRoute>
-  }
-/>
-            
+              path="/fee-structures/:id"
+              element={
+                <ProtectedRoute>
+                  <FeeStructureDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/students/:id/bill"
+              element={
+                <ProtectedRoute>
+                  <GenerateBill />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bills/:id"
+              element={
+                <ProtectedRoute>
+                  <BillDetail />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

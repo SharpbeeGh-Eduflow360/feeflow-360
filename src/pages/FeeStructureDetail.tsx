@@ -110,7 +110,7 @@ export default function FeeStructureDetail() {
     <AppLayout>
       <div className="mx-auto max-w-2xl">
         <button
-          onClick={() => navigate('/fee-structures')}
+          onClick={() => navigate('/billing')}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />

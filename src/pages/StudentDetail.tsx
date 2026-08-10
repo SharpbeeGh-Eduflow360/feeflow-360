@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Card, CardContent } from '@/components/ui/card'
@@ -46,6 +46,14 @@ interface OpeningBalance {
   created_at: string
 }
 
+interface Bill {
+  id: string
+  bill_number: string | null
+  total_amount: number
+  amount_paid: number
+  status: string
+}
+
 const statusOptions = ['active', 'promoted', 'graduated', 'transferred', 'withdrawn', 'suspended', 'alumni']
 
 export default function StudentDetail() {
@@ -57,6 +65,7 @@ export default function StudentDetail() {
   const [grades, setGrades] = useState<Grade[]>([])
   const [sections, setSections] = useState<Section[]>([])
   const [openingBalances, setOpeningBalances] = useState<OpeningBalance[]>([])
+  const [bills, setBills] = useState<Bill[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -65,12 +74,13 @@ export default function StudentDetail() {
 
   useEffect(() => {
     async function load() {
-      const [studentRes, deptRes, gradeRes, sectionRes, balancesRes] = await Promise.all([
+      const [studentRes, deptRes, gradeRes, sectionRes, balancesRes, billsRes] = await Promise.all([
         supabase.from('students').select('*').eq('id', id).single(),
         supabase.from('departments').select('id, name').order('position'),
         supabase.from('grades').select('id, name, department_id').order('position'),
         supabase.from('sections').select('id, name, grade_id'),
         supabase.from('opening_balances').select('id, amount, note, created_at').eq('student_id', id).order('created_at', { ascending: false }),
+        supabase.from('bills').select('id, bill_number, total_amount, amount_paid, status').eq('student_id', id).order('created_at', { ascending: false }),
       ])
 
       if (studentRes.data) setStudent(studentRes.data)
@@ -78,6 +88,7 @@ export default function StudentDetail() {
       if (gradeRes.data) setGrades(gradeRes.data)
       if (sectionRes.data) setSections(sectionRes.data)
       if (balancesRes.data) setOpeningBalances(balancesRes.data)
+      if (billsRes.data) setBills(billsRes.data)
       setLoading(false)
     }
     load()
@@ -86,6 +97,10 @@ export default function StudentDetail() {
   const gradesInDept = grades.filter((g) => g.department_id === student?.department_id)
   const sectionsInGrade = sections.filter((s) => s.grade_id === student?.grade_id)
   const totalOpeningBalance = openingBalances.reduce((sum, b) => sum + Number(b.amount), 0)
+  const totalBillOutstanding = bills
+    .filter((b) => b.status !== 'cancelled' && b.status !== 'voided')
+    .reduce((sum, b) => sum + (Number(b.total_amount) - Number(b.amount_paid)), 0)
+  const totalBalance = totalOpeningBalance + totalBillOutstanding
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -197,9 +212,14 @@ export default function StudentDetail() {
             <h1 className="text-2xl font-bold">{student.first_name} {student.last_name}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{student.admission_number}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleDelete} className="text-destructive hover:text-destructive">
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" className="bg-brand-navy text-white hover:bg-brand-navy-light">
+              <Link to={`/students/${student.id}/bill`}>Generate bill</Link>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleDelete} className="text-destructive hover:text-destructive">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="mt-6 flex flex-col gap-6">
@@ -240,9 +260,31 @@ export default function StudentDetail() {
                     </div>
                   ))}
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Recorded once, carried forward automatically once billing is enabled.
-                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {bills.length > 0 && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-muted-foreground">Total balance</h2>
+                  <span className={`text-lg font-semibold ${totalBalance > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                    GH¢{totalBalance.toFixed(2)} owed
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-col gap-2">
+                  {bills.map((b) => (
+                    <Link
+                      key={b.id}
+                      to={`/bills/${b.id}`}
+                      className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm hover:bg-muted"
+                    >
+                      <span>{b.bill_number}</span>
+                      <span className="font-medium">GH¢{Number(b.total_amount).toFixed(2)}</span>
+                    </Link>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}

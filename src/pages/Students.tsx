@@ -60,29 +60,38 @@ export default function Students() {
 
   useEffect(() => {
     async function load() {
-      const [studentsRes, gradesRes, sectionsRes, balancesRes] = await Promise.all([
-        supabase
-          .from('students')
-          .select('id, admission_number, first_name, last_name, photo_url, status, grade_id, section_id')
-          .order('created_at', { ascending: false }),
-        supabase.from('grades').select('id, name').order('position'),
-        supabase.from('sections').select('id, name'),
-        supabase.from('opening_balances').select('student_id, amount'),
-      ])
+      const [studentsRes, gradesRes, sectionsRes, balancesRes, billsRes] = await Promise.all([
+  supabase
+    .from('students')
+    .select('id, admission_number, first_name, last_name, photo_url, status, grade_id, section_id')
+    .order('created_at', { ascending: false }),
+  supabase.from('grades').select('id, name').order('position'),
+  supabase.from('sections').select('id, name'),
+  supabase.from('opening_balances').select('student_id, amount'),
+  supabase.from('bills').select('student_id, total_amount, amount_paid, status').neq('status', 'cancelled').neq('status', 'voided'),
+])
 
-      if (studentsRes.data) setStudents(studentsRes.data)
-      if (gradesRes.data) setGrades(gradesRes.data)
-      if (sectionsRes.data) setSections(sectionsRes.data)
+if (studentsRes.data) setStudents(studentsRes.data)
+if (gradesRes.data) setGrades(gradesRes.data)
+if (sectionsRes.data) setSections(sectionsRes.data)
 
-      if (balancesRes.data) {
-        const totals: Record<string, number> = {}
-        for (const row of balancesRes.data) {
-          totals[row.student_id] = (totals[row.student_id] ?? 0) + Number(row.amount)
-        }
-        setBalances(totals)
-      }
+const totals: Record<string, number> = {}
 
-      setLoading(false)
+if (balancesRes.data) {
+  for (const row of balancesRes.data) {
+    totals[row.student_id] = (totals[row.student_id] ?? 0) + Number(row.amount)
+  }
+}
+
+if (billsRes.data) {
+  for (const row of billsRes.data) {
+    const outstanding = Number(row.total_amount) - Number(row.amount_paid)
+    totals[row.student_id] = (totals[row.student_id] ?? 0) + outstanding
+  }
+}
+
+setBalances(totals)
+setLoading(false)
     }
     load()
   }, [])
