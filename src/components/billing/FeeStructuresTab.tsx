@@ -10,7 +10,6 @@ interface FeeStructureRow {
   name: string
   academic_year_id: string | null
   term_id: string | null
-  grade_id: string | null
 }
 
 interface Lookup {
@@ -22,24 +21,23 @@ export default function FeeStructuresTab() {
   const [structures, setStructures] = useState<FeeStructureRow[]>([])
   const [years, setYears] = useState<Lookup[]>([])
   const [terms, setTerms] = useState<Lookup[]>([])
-  const [grades, setGrades] = useState<Lookup[]>([])
   const [totals, setTotals] = useState<Record<string, number>>({})
+  const [gradesByStructure, setGradesByStructure] = useState<Record<string, string[]>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
-      const [structRes, yearsRes, termsRes, gradesRes, itemsRes] = await Promise.all([
-        supabase.from('fee_structures').select('id, name, academic_year_id, term_id, grade_id').order('created_at', { ascending: false }),
+      const [structRes, yearsRes, termsRes, itemsRes, gradeLinksRes] = await Promise.all([
+        supabase.from('fee_structures').select('id, name, academic_year_id, term_id').order('created_at', { ascending: false }),
         supabase.from('academic_years').select('id, name'),
         supabase.from('terms').select('id, name'),
-        supabase.from('grades').select('id, name'),
         supabase.from('fee_structure_items').select('fee_structure_id, amount'),
+        supabase.from('fee_structure_grades').select('fee_structure_id, grades(name)'),
       ])
 
       if (structRes.data) setStructures(structRes.data)
       if (yearsRes.data) setYears(yearsRes.data)
       if (termsRes.data) setTerms(termsRes.data)
-      if (gradesRes.data) setGrades(gradesRes.data)
 
       if (itemsRes.data) {
         const sums: Record<string, number> = {}
@@ -47,6 +45,17 @@ export default function FeeStructuresTab() {
           sums[item.fee_structure_id] = (sums[item.fee_structure_id] ?? 0) + Number(item.amount)
         }
         setTotals(sums)
+      }
+
+      if (gradeLinksRes.data) {
+        const map: Record<string, string[]> = {}
+        for (const row of gradeLinksRes.data as any[]) {
+          const name = row.grades?.name
+          if (!name) continue
+          if (!map[row.fee_structure_id]) map[row.fee_structure_id] = []
+          map[row.fee_structure_id].push(name)
+        }
+        setGradesByStructure(map)
       }
 
       setLoading(false)
@@ -83,25 +92,28 @@ export default function FeeStructuresTab() {
           </Card>
         )}
 
-        {structures.map((s) => (
-          <Link key={s.id} to={`/fee-structures/${s.id}`}>
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardContent className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium">{s.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {[lookup(years, s.academic_year_id), lookup(terms, s.term_id), lookup(grades, s.grade_id)]
-                      .filter(Boolean)
-                      .join(' · ') || 'No filters set'}
-                  </p>
-                </div>
-                <span className="font-semibold text-brand-gold">
-                  GH¢{(totals[s.id] ?? 0).toFixed(2)}
-                </span>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+        {structures.map((s) => {
+          const grades = gradesByStructure[s.id] ?? []
+          const subtitle = [lookup(years, s.academic_year_id), lookup(terms, s.term_id), ...grades]
+            .filter(Boolean)
+            .join(' · ')
+
+          return (
+            <Link key={s.id} to={`/fee-structures/${s.id}`}>
+              <Card className="transition-colors hover:bg-muted/50">
+                <CardContent className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="font-medium">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">{subtitle || 'No filters set'}</p>
+                  </div>
+                  <span className="font-semibold text-brand-gold">
+                    GH¢{(totals[s.id] ?? 0).toFixed(2)}
+                  </span>
+                </CardContent>
+              </Card>
+            </Link>
+          )
+        })}
       </div>
     </div>
   )

@@ -20,6 +20,9 @@ import FeeStructureDetail from './pages/FeeStructureDetail'
 import GenerateBill from './pages/GenerateBill'
 import Billing from './pages/Billing'
 import BillDetail from './pages/BillDetail'
+import BulkGenerateBill from './pages/BulkGenerateBill'
+import BulkPrintBills from './pages/BulkPrintBills'
+import PublicBillView from './pages/PublicBillView'
 
 function App() {
   return (
@@ -129,6 +132,23 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+  path="/billing/bulk"
+  element={
+    <ProtectedRoute>
+      <BulkGenerateBill />
+    </ProtectedRoute>
+  }
+/>
+            <Route
+  path="/billing/print"
+  element={
+    <ProtectedRoute>
+      <BulkPrintBills />
+    </ProtectedRoute>
+  }
+/>
+            <Route path="/view/bill/:id" element={<PublicBillView />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

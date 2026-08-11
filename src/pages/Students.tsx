@@ -61,37 +61,42 @@ export default function Students() {
   useEffect(() => {
     async function load() {
       const [studentsRes, gradesRes, sectionsRes, balancesRes, billsRes] = await Promise.all([
-  supabase
-    .from('students')
-    .select('id, admission_number, first_name, last_name, photo_url, status, grade_id, section_id')
-    .order('created_at', { ascending: false }),
-  supabase.from('grades').select('id, name').order('position'),
-  supabase.from('sections').select('id, name'),
-  supabase.from('opening_balances').select('student_id, amount'),
-  supabase.from('bills').select('student_id, total_amount, amount_paid, status').neq('status', 'cancelled').neq('status', 'voided'),
-])
+        supabase
+          .from('students')
+          .select('id, admission_number, first_name, last_name, photo_url, status, grade_id, section_id')
+          .order('created_at', { ascending: false }),
+        supabase.from('grades').select('id, name').order('position'),
+        supabase.from('sections').select('id, name'),
+        supabase.from('opening_balances').select('student_id, amount').eq('carried_forward', false),
+        supabase
+          .from('bills')
+          .select('student_id, total_amount, amount_paid, status')
+          .eq('carried_forward', false)
+          .neq('status', 'cancelled')
+          .neq('status', 'voided'),
+      ])
 
-if (studentsRes.data) setStudents(studentsRes.data)
-if (gradesRes.data) setGrades(gradesRes.data)
-if (sectionsRes.data) setSections(sectionsRes.data)
+      if (studentsRes.data) setStudents(studentsRes.data)
+      if (gradesRes.data) setGrades(gradesRes.data)
+      if (sectionsRes.data) setSections(sectionsRes.data)
 
-const totals: Record<string, number> = {}
+      const totals: Record<string, number> = {}
 
-if (balancesRes.data) {
-  for (const row of balancesRes.data) {
-    totals[row.student_id] = (totals[row.student_id] ?? 0) + Number(row.amount)
-  }
-}
+      if (balancesRes.data) {
+        for (const row of balancesRes.data) {
+          totals[row.student_id] = (totals[row.student_id] ?? 0) + Number(row.amount)
+        }
+      }
 
-if (billsRes.data) {
-  for (const row of billsRes.data) {
-    const outstanding = Number(row.total_amount) - Number(row.amount_paid)
-    totals[row.student_id] = (totals[row.student_id] ?? 0) + outstanding
-  }
-}
+      if (billsRes.data) {
+        for (const row of billsRes.data) {
+          const outstanding = Number(row.total_amount) - Number(row.amount_paid)
+          totals[row.student_id] = (totals[row.student_id] ?? 0) + outstanding
+        }
+      }
 
-setBalances(totals)
-setLoading(false)
+      setBalances(totals)
+      setLoading(false)
     }
     load()
   }, [])
@@ -123,12 +128,10 @@ setLoading(false)
               {loading ? 'Loading...' : `${filtered.length} of ${students.length} students`}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
-  <Link to="/students/promote">
-    Promote
-  </Link>
-</Button>
+              <Link to="/students/promote">Promote</Link>
+            </Button>
             <Button asChild variant="outline">
               <Link to="/students/import">
                 <Upload className="mr-2 h-4 w-4" />

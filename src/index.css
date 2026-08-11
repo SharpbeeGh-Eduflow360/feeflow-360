@@ -140,3 +140,8 @@
     @apply font-sans;
     }
 }
+@media print {
+  @page {
+    margin: 1cm;
+  }
+}

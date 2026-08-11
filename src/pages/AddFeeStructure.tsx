@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -27,7 +28,8 @@ interface Grade extends Lookup {
 
 interface LineItem {
   fee_category_id: string
-  amount: string
+  quantity: string
+  unit_price: string
 }
 
 export default function AddFeeStructure() {
@@ -44,10 +46,10 @@ export default function AddFeeStructure() {
   const [academicYearId, setAcademicYearId] = useState('')
   const [termId, setTermId] = useState('')
   const [departmentId, setDepartmentId] = useState('')
-  const [gradeId, setGradeId] = useState('')
+  const [selectedGradeIds, setSelectedGradeIds] = useState<Set<string>>(new Set())
   const [studentType, setStudentType] = useState('')
 
-  const [items, setItems] = useState<LineItem[]>([{ fee_category_id: '', amount: '' }])
+  const [items, setItems] = useState<LineItem[]>([{ fee_category_id: '', quantity: '1', unit_price: '' }])
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -72,35 +74,48 @@ export default function AddFeeStructure() {
 
   const gradesInDept = grades.filter((g) => g.department_id === departmentId)
 
+  function toggleGrade(gradeId: string) {
+    setSelectedGradeIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(gradeId)) next.delete(gradeId)
+      else next.add(gradeId)
+      return next
+    })
+  }
+
   function updateItem(index: number, field: keyof LineItem, value: string) {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)))
   }
 
   function addItem() {
-    setItems((prev) => [...prev, { fee_category_id: '', amount: '' }])
+    setItems((prev) => [...prev, { fee_category_id: '', quantity: '1', unit_price: '' }])
   }
 
   function removeItem(index: number) {
     setItems((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const total = items.reduce((sum, item) => {
-    const amt = parseFloat(item.amount)
-    return sum + (isNaN(amt) ? 0 : amt)
-  }, 0)
+  function lineTotal(item: LineItem) {
+    const qty = parseFloat(item.quantity) || 0
+    const price = parseFloat(item.unit_price) || 0
+    return qty * price
+  }
+
+  const total = items.reduce((sum, item) => sum + lineTotal(item), 0)
 
   async function handleSubmit() {
     if (!school || !name.trim()) return
     setError(null)
 
-    const validItems = items.filter((i) => i.fee_category_id && parseFloat(i.amount) > 0)
+    const validItems = items.filter(
+      (i) => i.fee_category_id && parseFloat(i.unit_price) > 0 && parseFloat(i.quantity) > 0
+    )
 
     if (validItems.length === 0) {
-      setError('Add at least one fee item with a category and amount.')
+      setError('Add at least one fee item with a category, quantity, and unit price.')
       return
     }
 
-    // Check for duplicate categories within this structure
     const categoryIds = validItems.map((i) => i.fee_category_id)
     if (new Set(categoryIds).size !== categoryIds.length) {
       setError('Each fee category can only be used once per structure.')
@@ -117,7 +132,6 @@ export default function AddFeeStructure() {
         academic_year_id: academicYearId || null,
         term_id: termId || null,
         department_id: departmentId || null,
-        grade_id: gradeId || null,
         student_type: studentType || null,
       })
       .select()
@@ -129,22 +143,44 @@ export default function AddFeeStructure() {
       return
     }
 
-    const itemRows = validItems.map((i) => ({
-      school_id: school.id,
-      fee_structure_id: structure.id,
-      fee_category_id: i.fee_category_id,
-      amount: parseFloat(i.amount),
-    }))
+    const itemRows = validItems.map((i) => {
+      const qty = parseFloat(i.quantity)
+      const price = parseFloat(i.unit_price)
+      return {
+        school_id: school.id,
+        fee_structure_id: structure.id,
+        fee_category_id: i.fee_category_id,
+        quantity: qty,
+        unit_price: price,
+        amount: qty * price,
+      }
+    })
 
     const { error: itemsError } = await supabase.from('fee_structure_items').insert(itemRows)
 
-    setSaving(false)
-
     if (itemsError) {
       setError(itemsError.message)
+      setSaving(false)
       return
     }
 
+    if (selectedGradeIds.size > 0) {
+      const gradeRows = Array.from(selectedGradeIds).map((gradeId) => ({
+        school_id: school.id,
+        fee_structure_id: structure.id,
+        grade_id: gradeId,
+      }))
+
+      const { error: gradesError } = await supabase.from('fee_structure_grades').insert(gradeRows)
+
+      if (gradesError) {
+        setError(gradesError.message)
+        setSaving(false)
+        return
+      }
+    }
+
+    setSaving(false)
     navigate(`/fee-structures/${structure.id}`)
   }
 
@@ -152,11 +188,11 @@ export default function AddFeeStructure() {
     <AppLayout>
       <div className="mx-auto max-w-2xl">
         <button
-          onClick={() => navigate('/fee-structures')}
+          onClick={() => navigate('/billing')}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to fee structures
+          Back to billing
         </button>
 
         <h1 className="mt-4 text-2xl font-bold">New fee structure</h1>
@@ -172,7 +208,7 @@ export default function AddFeeStructure() {
               <div className="flex flex-col gap-2">
                 <Label>Structure name</Label>
                 <Input
-                  placeholder="e.g. Basic 4 First Term Fees"
+                  placeholder="e.g. First Term Fees"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
@@ -203,31 +239,6 @@ export default function AddFeeStructure() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label>Department</Label>
-                  <Select value={departmentId} onValueChange={(v) => { setDepartmentId(v); setGradeId('') }}>
-                    <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-                    <SelectContent>
-                      {departments.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Grade</Label>
-                  <Select value={gradeId} onValueChange={setGradeId} disabled={!departmentId}>
-                    <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-                    <SelectContent>
-                      {gradesInDept.map((g) => (
-                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
               <div className="flex flex-col gap-2">
                 <Label>Student type</Label>
                 <Select value={studentType} onValueChange={setStudentType}>
@@ -243,6 +254,48 @@ export default function AddFeeStructure() {
 
           <Card>
             <CardContent className="flex flex-col gap-4 pt-6">
+              <h2 className="text-sm font-semibold text-muted-foreground">Applies to grades</h2>
+              <p className="text-xs text-muted-foreground">
+                Select which grades this fee structure applies to.
+              </p>
+
+              <div className="flex flex-col gap-2">
+                <Label>Department</Label>
+                <Select value={departmentId} onValueChange={setDepartmentId}>
+                  <SelectTrigger><SelectValue placeholder="Select a department to see its grades" /></SelectTrigger>
+                  <SelectContent>
+                    {departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {departmentId && (
+                <div className="flex flex-col gap-2">
+                  {gradesInDept.map((g) => (
+                    <label key={g.id} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={selectedGradeIds.has(g.id)}
+                        onCheckedChange={() => toggleGrade(g.id)}
+                      />
+                      {g.name}
+                    </label>
+                  ))}
+                  {gradesInDept.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No grades in this department yet.</p>
+                  )}
+                </div>
+              )}
+
+              {selectedGradeIds.size > 0 && (
+                <p className="text-xs text-brand-gold">{selectedGradeIds.size} grade(s) selected</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col gap-4 pt-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-muted-foreground">Fee items</h2>
                 <span className="text-sm font-semibold text-brand-gold">
@@ -252,7 +305,7 @@ export default function AddFeeStructure() {
 
               <div className="flex flex-col gap-2">
                 {items.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
+                  <div key={index} className="flex flex-col gap-2 rounded-lg border p-2 sm:flex-row sm:items-center">
                     <Select
                       value={item.fee_category_id}
                       onValueChange={(v) => updateItem(index, 'fee_category_id', v)}
@@ -264,21 +317,36 @@ export default function AddFeeStructure() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={item.amount}
-                      onChange={(e) => updateItem(index, 'amount', e.target.value)}
-                      className="w-28"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        step="1"
+                        min="1"
+                        placeholder="Qty"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                        className="w-16"
+                      />
+                      <span className="text-xs text-muted-foreground">×</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Unit price"
+                        value={item.unit_price}
+                        onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
+                        className="w-24"
+                      />
+                      <span className="w-20 shrink-0 text-right text-sm font-medium">
+                        GH¢{lineTotal(item).toFixed(2)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeItem(index)}
+                        className="shrink-0 text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -11,7 +11,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen">
       {/* Desktop sidebar — always visible on large screens */}
-      <aside className="hidden w-64 shrink-0 border-r bg-background lg:block">
+      <aside className="hidden w-64 shrink-0 border-r bg-background lg:block print:hidden">
         <div className="flex h-16 items-center border-b px-4">
           <Link to="/dashboard" className="text-lg font-bold text-brand-navy dark:text-white">
             FeeFlow<span className="text-brand-gold">-360</span>
@@ -34,8 +34,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col">
-        <TopBar onMenuClick={() => setMobileOpen(true)} />
-        <main className="flex-1 bg-muted/30 p-4 md:p-6">{children}</main>
+        <div className="print:hidden">
+          <TopBar onMenuClick={() => setMobileOpen(true)} />
+        </div>
+        <main className="flex-1 bg-muted/30 p-4 md:p-6 print:p-0 print:bg-white">
+          {children}
+        </main>
       </div>
     </div>
   )

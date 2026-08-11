@@ -11,14 +11,14 @@ interface StructureData {
   name: string
   academic_year_id: string | null
   term_id: string | null
-  department_id: string | null
-  grade_id: string | null
   student_type: string | null
 }
 
 interface Item {
   id: string
   amount: number
+  quantity: number
+  unit_price: number
   fee_category_id: string
 }
 
@@ -36,20 +36,18 @@ export default function FeeStructureDetail() {
   const [categories, setCategories] = useState<Lookup[]>([])
   const [years, setYears] = useState<Lookup[]>([])
   const [terms, setTerms] = useState<Lookup[]>([])
-  const [departments, setDepartments] = useState<Lookup[]>([])
-  const [grades, setGrades] = useState<Lookup[]>([])
+  const [assignedGradeNames, setAssignedGradeNames] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
-      const [structRes, itemsRes, catRes, yearsRes, termsRes, deptRes, gradeRes] = await Promise.all([
+      const [structRes, itemsRes, catRes, yearsRes, termsRes, gradeLinksRes] = await Promise.all([
         supabase.from('fee_structures').select('*').eq('id', id).single(),
-        supabase.from('fee_structure_items').select('id, amount, fee_category_id').eq('fee_structure_id', id),
+        supabase.from('fee_structure_items').select('id, amount, quantity, unit_price, fee_category_id').eq('fee_structure_id', id),
         supabase.from('fee_categories').select('id, name'),
         supabase.from('academic_years').select('id, name'),
         supabase.from('terms').select('id, name'),
-        supabase.from('departments').select('id, name'),
-        supabase.from('grades').select('id, name'),
+        supabase.from('fee_structure_grades').select('grade_id, grades(name)').eq('fee_structure_id', id),
       ])
 
       if (structRes.data) setStructure(structRes.data)
@@ -57,8 +55,13 @@ export default function FeeStructureDetail() {
       if (catRes.data) setCategories(catRes.data)
       if (yearsRes.data) setYears(yearsRes.data)
       if (termsRes.data) setTerms(termsRes.data)
-      if (deptRes.data) setDepartments(deptRes.data)
-      if (gradeRes.data) setGrades(gradeRes.data)
+
+      if (gradeLinksRes.data) {
+        const names = gradeLinksRes.data
+          .map((row: any) => row.grades?.name)
+          .filter(Boolean)
+        setAssignedGradeNames(names)
+      }
 
       setLoading(false)
     }
@@ -78,7 +81,7 @@ export default function FeeStructureDetail() {
     const { error } = await supabase.from('fee_structures').delete().eq('id', structure.id)
 
     if (!error) {
-      navigate('/fee-structures')
+      navigate('/billing')
     }
   }
 
@@ -101,9 +104,8 @@ export default function FeeStructureDetail() {
   const tags = [
     lookup(years, structure.academic_year_id),
     lookup(terms, structure.term_id),
-    lookup(departments, structure.department_id),
-    lookup(grades, structure.grade_id),
     structure.student_type,
+    ...assignedGradeNames,
   ].filter(Boolean)
 
   return (
@@ -114,7 +116,7 @@ export default function FeeStructureDetail() {
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to fee structures
+          Back to billing
         </button>
 
         <div className="mt-4 flex items-center justify-between">
@@ -141,7 +143,14 @@ export default function FeeStructureDetail() {
             <div className="mt-3 flex flex-col divide-y">
               {items.map((item) => (
                 <div key={item.id} className="flex items-center justify-between py-2.5">
-                  <span className="text-sm">{lookup(categories, item.fee_category_id)}</span>
+                  <div>
+                    <span className="text-sm">{lookup(categories, item.fee_category_id)}</span>
+                    {Number(item.quantity) !== 1 && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({item.quantity} × GH¢{Number(item.unit_price).toFixed(2)})
+                      </span>
+                    )}
+                  </div>
                   <span className="text-sm font-medium">GH¢{Number(item.amount).toFixed(2)}</span>
                 </div>
               ))}

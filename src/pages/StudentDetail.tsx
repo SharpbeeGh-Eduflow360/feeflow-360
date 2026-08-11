@@ -52,6 +52,7 @@ interface Bill {
   total_amount: number
   amount_paid: number
   status: string
+  carried_forward: boolean
 }
 
 const statusOptions = ['active', 'promoted', 'graduated', 'transferred', 'withdrawn', 'suspended', 'alumni']
@@ -80,7 +81,7 @@ export default function StudentDetail() {
         supabase.from('grades').select('id, name, department_id').order('position'),
         supabase.from('sections').select('id, name, grade_id'),
         supabase.from('opening_balances').select('id, amount, note, created_at').eq('student_id', id).order('created_at', { ascending: false }),
-        supabase.from('bills').select('id, bill_number, total_amount, amount_paid, status').eq('student_id', id).order('created_at', { ascending: false }),
+supabase.from('bills').select('id, bill_number, total_amount, amount_paid, status, carried_forward').eq('student_id', id).order('created_at', { ascending: false }),
       ])
 
       if (studentRes.data) setStudent(studentRes.data)
@@ -98,8 +99,8 @@ export default function StudentDetail() {
   const sectionsInGrade = sections.filter((s) => s.grade_id === student?.grade_id)
   const totalOpeningBalance = openingBalances.reduce((sum, b) => sum + Number(b.amount), 0)
   const totalBillOutstanding = bills
-    .filter((b) => b.status !== 'cancelled' && b.status !== 'voided')
-    .reduce((sum, b) => sum + (Number(b.total_amount) - Number(b.amount_paid)), 0)
+  .filter((b) => b.status !== 'cancelled' && b.status !== 'voided' && !b.carried_forward)
+  .reduce((sum, b) => sum + (Number(b.total_amount) - Number(b.amount_paid)), 0)
   const totalBalance = totalOpeningBalance + totalBillOutstanding
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
